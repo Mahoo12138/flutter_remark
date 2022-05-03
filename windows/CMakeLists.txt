@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 project(flutter_remark LANGUAGES CXX)
 
-set(BINARY_NAME "flutter_remark")
+set(BINARY_NAME "备注小工具")
 
 cmake_policy(SET CMP0063 NEW)
 

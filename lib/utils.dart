@@ -12,8 +12,16 @@ modifyRemark(String path, String remark) async {
   var content = '[.ShellClassInfo]\r\nInfoTip=' + remark + '\r\n';
   var settingPath = getSettingFilePath(path);
   var settingFile = File(settingPath);
-  await settingFile.writeAsString(content);
-  runCommand("attrib " + settingPath + ' +s +h');
-  runCommand("attrib " + path + ' +s');
+  try {
+    if (settingFile.existsSync()) {
+      await runCommand("attrib " + settingPath + ' -s -h');
+    } else {
+      settingFile.createSync();
+    }
+    await settingFile.writeAsString(content);
+    runCommand("attrib " + settingPath + ' +s +h');
+    runCommand("attrib " + path + ' +s');
+  } catch (e) {
+    print(e);
+  }
 }
-

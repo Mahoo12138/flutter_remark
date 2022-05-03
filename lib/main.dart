@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter_remark/utils.dart';
 import 'package:flutter_remark/window_button.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:file_picker/file_picker.dart';
@@ -58,6 +59,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   final Map<String, TextEditingController> _remarkControllers = {};
   final Map<String, TextEditingController> _pathControllers = {};
+
+  final String svgName = 'assets/file.svg';
 
   void _reset() {
     setState(() {
@@ -124,6 +127,19 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  Widget initialWidget() {
+    return Column(children: [
+      SizedBox(
+          width: 320,
+          height: 420,
+          child: SvgPicture.asset(svgName, semanticsLabel: 'Acme Logo')),
+      const Text(
+        "拖入文件夹或点击【添加】👇，开始编辑😊！",
+        style: TextStyle(fontSize: 25),
+      )
+    ]);
+  }
+
   Future<void> _chooseDirectory(TextEditingController? controller) async {
     String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
 
@@ -132,12 +148,16 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  _execModifyRemark() {
+  _execModifyRemark() async {
+    SmartDialog.showLoading(msg: "修改中");
     _inputResult.forEach((key, item) {
       if (item['path'] != "" && item['remark'] != "") {
         modifyRemark(item['path']!, item['remark']!);
       }
     });
+    await Future.delayed(const Duration(milliseconds: 800));
+    SmartDialog.dismiss();
+    SmartDialog.showToast('修改成功');
   }
 
   @override
@@ -171,7 +191,12 @@ class _MyHomePageState extends State<MyHomePage> {
                         Expanded(
                             child: MoveWindow(
                           child: Container(
-                            child: const Text("备注编辑小工具"),
+                            padding: const EdgeInsets.all(5),
+                            child: const Text(
+                              "备注编辑小工具",
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
                           ),
                         )),
                         WindowButtons()
@@ -179,14 +204,16 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                   ),
                   Expanded(
-                      child: SingleChildScrollView(
-                          child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: _inputWidgets,
-                    ),
-                  ))),
+                      child: _inputResult.isEmpty
+                          ? initialWidget()
+                          : SingleChildScrollView(
+                              child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: _inputWidgets,
+                              ),
+                            ))),
                   Padding(
                     padding: const EdgeInsets.all(20),
                     child: Row(
@@ -204,7 +231,8 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                         const SizedBox(width: 15),
                         ElevatedButton(
-                            onPressed: _inputResult.isEmpty ? null : () {},
+                            onPressed:
+                                _inputResult.isEmpty ? null : _execModifyRemark,
                             style: style,
                             child: const Text("确定"))
                       ],
