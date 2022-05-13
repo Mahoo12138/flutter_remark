@@ -5,7 +5,7 @@ import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter_remark/utils.dart';
 import 'package:flutter_remark/window_button.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:uuid/uuid.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -51,20 +51,21 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final List<Widget> _inputWidgets = [];
+  final List<Map<String, String>> _inputResult = [];
 
-  final Map<String, Map<String, String>> _inputResult = {};
-
+  // 拖入的文件
   final List<XFile> _fileList = [];
 
-  final Map<String, TextEditingController> _remarkControllers = {};
-  final Map<String, TextEditingController> _pathControllers = {};
+  // 输入框的控制器
+  final List<TextEditingController> _remarkControllers = [];
+  final List<TextEditingController> _pathControllers = [];
+
+  final GlobalKey _formKey = GlobalKey<FormState>();
 
   final String svgName = 'assets/file.svg';
 
   void _reset() {
     setState(() {
-      _inputWidgets.clear();
       _inputResult.clear();
       _fileList.clear();
       _pathControllers.clear();
@@ -72,11 +73,18 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  void removeInputWidget(int index) {
+    _remarkControllers.removeAt(index);
+    _pathControllers.removeAt(index);
+  }
+
   void addInputWidget({XFile? file}) {
-    var key = const Uuid().v4();
-    _inputWidgets.add(_generateInput(key, file: file));
+    // var key = const Uuid().v4();
+    // _inputWidgets.add(_generateFormField(key, file: file));
     setState(() {
-      _inputResult[key] = {"path": file?.path ?? "", "remark": ""};
+      _pathControllers.add(TextEditingController(text: file?.path));
+      _remarkControllers.add(TextEditingController());
+      _inputResult.add({"path": file?.path ?? "", "remark": ""});
     });
   }
 
@@ -94,7 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   bool checkIsPathExist(String path) {
     var isExist = false;
-    _inputResult.forEach((key, value) {
+    _inputResult.mapIndexed((key, value) {
       if (value["path"] == path) {
         isExist = true;
       }
@@ -102,27 +110,44 @@ class _MyHomePageState extends State<MyHomePage> {
     return isExist;
   }
 
-  Widget _generateInput(String key, {XFile? file}) {
-    _pathControllers[key] = TextEditingController(text: file?.path);
-    _remarkControllers[key] = TextEditingController();
+  Widget _generateFormField(int index, {XFile? file}) {
     return Row(
       children: [
         Expanded(
-          child: TextField(
-            controller: _pathControllers[key],
+          child: TextFormField(
+            controller: _pathControllers[index],
             decoration: InputDecoration(
                 hintText: "请输入文件夹路径",
                 suffixIcon: IconButton(
-                    onPressed: () => {_chooseDirectory(_pathControllers[key])},
+                    onPressed: () =>
+                        {_chooseDirectory(_pathControllers[index])},
                     icon: const Icon(Icons.more_horiz_rounded))),
+            validator: (path) {
+              print(path);
+              return checkDirIsExist(path) ? null : "路径不存在或不合法";
+            },
           ),
         ),
         const SizedBox(width: 50),
         Expanded(
-            child: TextField(
-          controller: _remarkControllers[key],
+            child: TextFormField(
+          controller: _remarkControllers[index],
           decoration: const InputDecoration(hintText: "请输入文件夹备注"),
-        ))
+          validator: (comment) {
+            // TODO: 为空应不应该清除
+            return comment!.trim().isNotEmpty ? null : "备注不能为空";
+          },
+        )),
+        IconButton(
+            onPressed: () {
+              setState(() {
+                _inputResult.removeAt(index);
+              });
+            },
+            icon: const Icon(
+              Icons.close_rounded,
+              color: Colors.blue,
+            ))
       ],
     );
   }
@@ -149,15 +174,17 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   _execModifyRemark() async {
-    SmartDialog.showLoading(msg: "修改中");
-    _inputResult.forEach((key, item) {
-      if (item['path'] != "" && item['remark'] != "") {
-        modifyRemark(item['path']!, item['remark']!);
-      }
-    });
-    await Future.delayed(const Duration(milliseconds: 800));
-    SmartDialog.dismiss();
-    SmartDialog.showToast('修改成功');
+    if ((_formKey.currentState as FormState).validate()) {
+      SmartDialog.showLoading(msg: "修改中");
+      _inputResult.forEachIndexed((key, item) {
+        if (item['path'] != "" && item['remark'] != "") {
+          modifyRemark(item['path']!, item['remark']!);
+        }
+      });
+      await Future.delayed(const Duration(milliseconds: 800));
+      SmartDialog.dismiss();
+      SmartDialog.showToast('修改成功');
+    }
   }
 
   @override
@@ -167,14 +194,14 @@ class _MyHomePageState extends State<MyHomePage> {
       minimumSize: MaterialStateProperty.all(Size(0, 0)),
       maximumSize: MaterialStateProperty.all(Size(400.0, 45.0)),
     );
-    _pathControllers.forEach((key, controller) {
+    _pathControllers.forEachIndexed((index, controller) {
       controller.addListener(() {
-        _inputResult[key]!["path"] = controller.text;
+        _inputResult[index]["path"] = controller.text;
       });
     });
-    _remarkControllers.forEach((key, controller) {
+    _remarkControllers.forEachIndexed((index, controller) {
       controller.addListener(() {
-        _inputResult[key]!["remark"] = controller.text;
+        _inputResult[index]["remark"] = controller.text;
       });
     });
 
@@ -206,14 +233,16 @@ class _MyHomePageState extends State<MyHomePage> {
                   Expanded(
                       child: _inputResult.isEmpty
                           ? initialWidget()
-                          : SingleChildScrollView(
-                              child: Padding(
+                          : Padding(
                               padding: const EdgeInsets.all(20),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: _inputWidgets,
-                              ),
-                            ))),
+                              child: Form(
+                                  key: _formKey,
+                                  child: ListView.builder(
+                                      itemCount: _inputResult.length,
+                                      itemBuilder: ((context, index) {
+                                        return _generateFormField(index);
+                                      }))),
+                            )),
                   Padding(
                     padding: const EdgeInsets.all(20),
                     child: Row(
