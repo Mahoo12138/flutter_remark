@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(),
       // here
       navigatorObservers: [FlutterSmartDialog.observer],
       // here
@@ -42,9 +42,7 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  final String title;
+  const MyHomePage({Key? key}) : super(key: key);
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -187,6 +185,42 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  _restartExplorer() async {
+    SmartDialog.show(
+        widget: Container(
+      margin: const EdgeInsets.all(20),
+      height: 180,
+      width: 380,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      alignment: Alignment.center,
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        const Text(
+          '确定要重启资源管理器吗？',
+          style: TextStyle(color: Colors.black, fontSize: 16),
+        ),
+        const SizedBox(height: 25),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+                onPressed: () => SmartDialog.dismiss(),
+                child: const Text("取消")),
+            const SizedBox(width: 35),
+            ElevatedButton(
+                onPressed: () {
+                  restartExplorer();
+                  SmartDialog.dismiss();
+                },
+                child: const Text("确认")),
+          ],
+        )
+      ]),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     var style = ButtonStyle(
@@ -248,6 +282,21 @@ class _MyHomePageState extends State<MyHomePage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        _inputResult.isEmpty
+                            ? Container()
+                            : ElevatedButton(
+                                onPressed: _restartExplorer,
+                                style: ButtonStyle(
+                                    padding: MaterialStateProperty.all(
+                                        EdgeInsets.all(20)),
+                                    minimumSize:
+                                        MaterialStateProperty.all(Size(0, 0)),
+                                    maximumSize: MaterialStateProperty.all(
+                                        Size(400.0, 45.0)),
+                                    backgroundColor: MaterialStateProperty.all(
+                                        Colors.redAccent)),
+                                child: const Text("重启资源管理器")),
+                        const Expanded(child: SizedBox(width: 15)),
                         ElevatedButton(
                             onPressed: addInputWidget,
                             style: style,

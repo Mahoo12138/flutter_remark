@@ -36,3 +36,11 @@ modifyRemark(String path, String remark) async {
     print(e);
   }
 }
+
+restartExplorer() async {
+  const killCmd = "taskkill /f /im explorer.exe";
+  const startCmd = "start explorer.exe";
+
+  await runCommand(killCmd);
+  runCommand(startCmd);
+}
